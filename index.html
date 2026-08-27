@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <title>Emily Camily| Filmmaker & Video Editor</title>
 
@@ -282,7 +283,7 @@
                     rgba(8, 6, 7, 0.75) 35%,
                     rgba(8, 6, 7, 0.2) 100%
                 ),
-                url("imagens/hero.jpg");
+                url("imagens/hero.jpeg");
 
             background-size: cover;
             background-position: center;
@@ -2235,6 +2236,84 @@
 
         });
 
+
+
+        /* =====================================================
+           SUPABASE — CARREGAMENTO DOS PROJETOS
+           Mantém o HTML/CSS original. O banco apenas atualiza
+           conteúdo dos 4 cards que já existem no site.
+        ===================================================== */
+
+        const SUPABASE_URL = "https://okpigyibcioyhhsidyqr.supabase.co";
+        const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_l3dX_S9ABg8cx6ipFzyQjg_xzDExTUO";
+
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY
+        );
+
+        async function carregarProjetosDoSupabase() {
+
+            try {
+
+                const { data, error } = await supabaseClient
+                    .from("projects")
+                    .select("id,title,category,description,year,image_url,video_url,created_at")
+                    .order("created_at", { ascending: false });
+
+                if (error) {
+                    console.warn("Supabase: não foi possível carregar os projetos.", error.message);
+                    return;
+                }
+
+                if (!data || !data.length) {
+                    // Se o banco ainda estiver vazio, mantém exatamente os projetos originais.
+                    return;
+                }
+
+                const cards = document.querySelectorAll(".projects .project");
+
+                data.slice(0, cards.length).forEach((project, index) => {
+
+                    const card = cards[index];
+                    const image = card.querySelector(".project-image img");
+                    const name = card.querySelector(".project-name");
+                    const type = card.querySelector(".project-type");
+                    const description = card.querySelector(".project-description");
+
+                    if (project.image_url && image) {
+                        image.src = /^https?:\/\//i.test(project.image_url)
+                            ? project.image_url
+                            : supabaseClient.storage.from("images").getPublicUrl(project.image_url).data.publicUrl;
+                    }
+
+                    if (name && project.title) name.textContent = project.title;
+                    if (type && project.category) type.textContent = project.category;
+
+                    if (description) {
+                        const texto = project.description || "";
+                        description.textContent = project.year
+                            ? texto + " • " + project.year
+                            : texto;
+                    }
+
+                    if (project.video_url) {
+                        const videoUrl = /^https?:\/\//i.test(project.video_url)
+                            ? project.video_url
+                            : supabaseClient.storage.from("videos").getPublicUrl(project.video_url).data.publicUrl;
+
+                        card.dataset.video = videoUrl;
+                    }
+
+                });
+
+            } catch (err) {
+                console.warn("Supabase não disponível:", err);
+            }
+        }
+
+        // Carrega os dados sem alterar a estrutura visual original.
+        carregarProjetosDoSupabase();
 
 
         /* =====================================================
